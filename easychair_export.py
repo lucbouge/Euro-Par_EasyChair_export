@@ -4,7 +4,7 @@ import re
 
 
 dirname = "/Users/bouge/share/Recherche/EuroPar/Conferences/2022/Selection"
-filename = "data_2022-04-22_Excel.xlsx"
+filename = "data_2022-04-26.xlsx"
 
 ################################################################################
 
@@ -43,6 +43,7 @@ reviews_format = """
 Submission number: {submission_number}
 Reviewer number: {number}
 Version number: {version}
+Date: {date} {time}
 
 {scores}
 Total score: {total_score}
@@ -60,9 +61,8 @@ Date: {date} {time}
 
 def make_reviews(*, reviews_df=None, comments_df=None):
     assert reviews_df is not None
-    # assert comments_df is not None
     ##
-    reviews = ""
+    reviews = list()
     for (index, row) in reviews_df.iterrows():
         submission_number = row["submission #"]
         number = row["number"]
@@ -81,19 +81,23 @@ def make_reviews(*, reviews_df=None, comments_df=None):
         date = row["date"]
         time = row["time"]
         assert pd.isna(row["attachment?"])
-        reviews += reviews_format.format_map(locals())
+        review_text = reviews_format.format_map(locals())
+        reviews.append(review_text)
+    ##
     if comments_df is not None:
         for (index, row) in comments_df.iterrows():
             comment = row["comment"]
-            reviews += comments_format.format_map(locals())
-    return reviews
+            comment_text = comments_format.format_map(locals())
+            reviews.append(comment_text)
+    ##
+    return "\n".join(reviews)
 
 
 ################################################################################
 
 
 def make_hidden_columns(df):
-    hidden_columns = tuple(
+    hidden_columns = (
         column for column in df.columns if "member" in column or "reviewer" in column
     )
     return hidden_columns
@@ -111,7 +115,7 @@ def make_reviews_groups(df_dict):
 def make_comments_groups(df_dict):
     df = df_dict["Comments"]
     hidden_columns = make_hidden_columns(df)
-    df = df.drop(columns=hidden_columns)
+    df = df.drop(columns=list(hidden_columns))
     print(df.info())
     ##
     groups = df.groupby(by="submission #", axis="index")
